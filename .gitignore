@@ -13,3 +13,8 @@
 x64/
 Release/
 Debug/
+data/
+results/
+result/
+*.pcd
+*.ply

@@ -234,6 +234,9 @@ double calculate_translation_error(Eigen::Vector3d& est, Eigen::Vector3d& gt) {
 	return sqrt(t.dot(t)) * 100;
 }
 
+//用来生成RE和TE的函数，估计生成的变换矩阵是否合格
+//hxj
+//@GTmat.txt
 bool evaluation_est(Eigen::Matrix4d est, Eigen::Matrix4d gt, double re_thresh, double te_thresh, double& RE, double& TE) {
 	Eigen::Matrix3d rotation_est, rotation_gt;
 	Eigen::Vector3d translation_est, translation_gt;

@@ -136,10 +136,12 @@ void demo(){
     PointCloudPtr new_src_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     PointCloudPtr new_des_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    string src_path = "demo/src.pcd";
-    string des_path = "demo/des.pcd";
+    string src_path = "Octree_sampled_changeScale/cam02_sampled_oc7_changeScale.pcd";
+    string des_path = "Octree_sampled_changeScale/cam03_sampled_oc7_changeScale.pcd";
     pcl::io::loadPCDFile(src_path, *src_cloud);
     pcl::io::loadPCDFile(des_path, *des_cloud);
+	cout << "Finish load PCDFile." << endl;
+	cout << "Start calculate resolution." << endl;
     float src_resolution = MeshResolution_mr_compute(src_cloud);
     float des_resolution = MeshResolution_mr_compute(des_cloud);
     float resolution = (src_resolution + des_resolution) / 2;
@@ -147,10 +149,12 @@ void demo(){
     float downsample = 0.05;
     Voxel_grid_downsample(src_cloud, new_src_cloud, downsample);
     Voxel_grid_downsample(des_cloud, new_des_cloud, downsample);
+	cout << "Start calculate FPFH_deacriptor." << endl;
     vector<vector<float>> src_feature, des_feature;
     FPFH_descriptor(new_src_cloud, downsample*5, src_feature);
     FPFH_descriptor(new_des_cloud, downsample*5, des_feature);
 
+	cout << "Start feature_matching." << endl;
     vector<Corre_3DMatch>correspondence;
     feature_matching(new_src_cloud, new_des_cloud, src_feature, des_feature, correspondence);
 

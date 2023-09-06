@@ -149,6 +149,7 @@ bool registration(const string &name,const string &src_pointcloud, const string 
         printf("Mat File can't open!\n");
         return -1;
     }
+	//读取到的@GTmat.txt文件中的矩阵
     fscanf(fp, "%lf %lf %lf %lf\n", &GTmat(0, 0), &GTmat(0, 1), &GTmat(0, 2), &GTmat(0, 3));
     fscanf(fp, "%lf %lf %lf %lf\n", &GTmat(1, 0), &GTmat(1, 1), &GTmat(1, 2), &GTmat(1, 3));
     fscanf(fp, "%lf %lf %lf %lf\n", &GTmat(2, 0), &GTmat(2, 1), &GTmat(2, 2), &GTmat(2, 3));

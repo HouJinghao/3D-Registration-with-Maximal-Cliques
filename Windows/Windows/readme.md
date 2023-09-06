@@ -12,3 +12,16 @@ Before comiling, please make sure that the environment variables of `PCL` and `i
       ```
 - Option 2: Use any IDE that can directly handle CMakeLists files to open the `CMakeLists.txt` in the **root** directory of MAC. Then you should have obtained a usable project and just build it. I recommend using [CLion](https://www.jetbrains.com/clion/). For Windows users: your IDE must be set for `x64`.
 - NOTICE: Please compile in **RELEASE** mode!
+
+
+# 项目配置命令行参数
+# 重要！！！
+--output_path "E:\Program_data\Data\Shoe_PointClouds\test_MAC_0829_03\results"  
+--input_path "E:\Program_data\Data\Shoe_PointClouds\test_MAC_0829_02\data\sun3d-home_at-home_at_scan1_2013_jan_1"  
+--dataset_name "3dmatch" 
+--descriptor "predator"  
+--start_index  0   
+--no_logs true
+
+## 只用demo
+--demo ""
