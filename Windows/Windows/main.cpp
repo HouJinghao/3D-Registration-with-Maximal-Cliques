@@ -243,6 +243,7 @@ int main(int argc, char** argv) {
             case 's':
                 id = atoi(optarg);
                 break;
+			//调用demo的地方
             case 'm':
                 demo();
                 exit(0);

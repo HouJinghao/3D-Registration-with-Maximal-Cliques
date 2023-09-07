@@ -1032,6 +1032,7 @@ bool registration(const string &name,const string &src_pointcloud, const string 
 		}
 	}
 
+//demo调用的registration函数
 bool registration(PointCloudPtr& src, PointCloudPtr& des, vector<Corre_3DMatch>& correspondence, vector<double>& ov_corr_label, string folderPath, float resolution, float cmp_thresh) {
     bool sc2 = true;
     bool GT_cmp_mode = false;
