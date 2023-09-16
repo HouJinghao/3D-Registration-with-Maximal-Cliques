@@ -1236,7 +1236,7 @@ bool registration(PointCloudPtr& src, PointCloudPtr& des, vector<Corre_3DMatch>&
     igraph_vector_ptr_t cliques;
     igraph_vector_ptr_init(&cliques, 0);
     start = std::chrono::system_clock::now();
-
+	//极大团和最大团区别
     igraph_maximal_cliques(&g, &cliques, 3, 0); //3dlomatch 4 3dmatch; 3 Kitti  4
     //igraph_largest_cliques(&g, &cliques);
     end = std::chrono::system_clock::now();

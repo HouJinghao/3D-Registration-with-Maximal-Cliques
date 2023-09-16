@@ -148,7 +148,19 @@ void RCS_compute(pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud, vector<int> indices
 	int num_of_contour_points, vector<vector<float>>& Histograms);
 void ISS_detector(PointCloudPtr cloud, float mr, float support_radius, vector<int>& key_indices);
 void Harris3D_detector(PointCloudPtr cloud, float NMS_radius, vector<int>& key_indices);
+//自己实现的函数
+//计算单个点云团相对于整体点云质心的VFH特征
+void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature);
+void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature);
+//从整体点云中按照索引提取邻域内的小点云
+bool extractSubCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius_in, int i,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out);
+//计算整体点云中每个点的邻域相对于点云质心的VFHS特征
+void VFHS_descriptor_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resolution, std::vector<std::vector<float>>& features);
+void VFHS_descriptor_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resolution, std::vector<std::vector<float>>& features);
 void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radius, std::vector<std::vector<float>>& features);
+//新增函数，此函数除了计算FPFH外，还在此基础上增加了法向量信息，并适度放大
+void FPFH_Normal_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radius, std::vector<std::vector<float>>& features);
 void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, std::vector<int>& indices,
                      float sup_radius, std::vector<std::vector<float>>& features);
 int Voxel_grid_downsample(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, pcl::PointCloud<pcl::PointXYZ>::Ptr& new_cloud,

@@ -19,6 +19,13 @@
 //关于共享指针boost的头文件
 #include <boost/shared_ptr.hpp>
 #include<pcl/keypoints/iss_3d.h>
+//自己实现函数的依赖头文件
+#include <pcl/common/centroid.h>
+#include <pcl/features/vfh.h>//vfh
+#include <pcl/features/normal_3d.h>//法线特征
+#include <pcl/search/kdtree.h>
+#include <pcl/common/common.h>
+
 #include "Eva.h"
 /*******************************************************************************Descriptor********************************************************/
 void SHOT_compute(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, vector<int> indices, float sup_radius, vector<vector<float>>&features, vector<LRF>&LRFs)
@@ -700,6 +707,189 @@ void Harris3D_detector(PointCloudPtr cloud, float NMS_radius, vector<int>&key_in
 		key_indices.push_back(Idx[0]);
 	}
 }
+
+//自己实现的函数
+//计算单个点云团相对于整体点云质心的VFH特征
+//此处的法向量指向内部
+void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature) {
+	//计算点云的VFH
+	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree1(new pcl::search::KdTree<pcl::PointXYZ>());
+	ne.setInputCloud(cloud);
+	ne.setSearchMethod(tree1);
+	ne.setRadiusSearch(radius);
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	ne.compute(*normals);
+
+	pcl::VFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> vfh;
+	vfh.setInputCloud(cloud);
+	vfh.setInputNormals(normals);
+	//设置视点
+	vfh.setViewPoint(viewpoint[0], viewpoint[1], viewpoint[2]);
+
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree2(new pcl::search::KdTree<pcl::PointXYZ>());
+	vfh.setSearchMethod(tree2);
+	pcl::PointCloud<pcl::VFHSignature308>::Ptr vfh_ptr(new pcl::PointCloud<pcl::VFHSignature308>());
+	vfh.compute(*vfh_ptr);//计算特征值，这是一组特征值
+	//cout << vfh_ptr->size() << endl;
+	single_feature.resize(308);
+	for (int i = 0; i < 308; ++i)
+	{
+		single_feature[i] = vfh_ptr->points[0].histogram[i];
+
+	}
+	//std::cout << "calculated" << std::endl;
+}
+//此处的法向量指向内部
+void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature) {
+	//计算点云的VFH
+	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree1(new pcl::search::KdTree<pcl::PointXYZ>());
+	ne.setInputCloud(cloud);
+	ne.setSearchMethod(tree1);
+	ne.setRadiusSearch(radius);
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	ne.compute(*normals);
+	//--------------------------------------更改法线朝向外部-----------------------------
+	// -------------------法线方向统一朝向点云的外部--------------------
+	Eigen::Vector4f centroid;					// 质心
+	pcl::compute3DCentroid(*cloud, centroid);	// 齐次坐标，（c0,c1,c2,1）
+
+	const Eigen::Vector3f  ViewPoint = centroid.head<3>();
+
+	for (int i = 0; i < normals->points.size(); ++i) {
+		Eigen::Vector3f orientation_reference = ViewPoint - cloud->points[i].getVector3fMap();
+		auto normal = normals->points[i].getNormalVector3fMap();
+		if (normal.norm() == 0.0) {
+			normal = orientation_reference;
+			if (normal.norm() == 0.0) {
+				normal = Eigen::Vector3f(0.0, 0.0, 1.0);
+			}
+			else {
+				normal.normalize();
+			}
+		}
+		else if (normal.dot(orientation_reference) > 0.0) {
+			normal *= -1.0;
+		}
+	}
+
+	pcl::VFHEstimation<pcl::PointXYZ, pcl::Normal, pcl::VFHSignature308> vfh;
+	vfh.setInputCloud(cloud);
+	vfh.setInputNormals(normals);
+	//设置视点
+	vfh.setViewPoint(viewpoint[0], viewpoint[1], viewpoint[2]);
+
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree2(new pcl::search::KdTree<pcl::PointXYZ>());
+	vfh.setSearchMethod(tree2);
+	pcl::PointCloud<pcl::VFHSignature308>::Ptr vfh_ptr(new pcl::PointCloud<pcl::VFHSignature308>());
+	vfh.compute(*vfh_ptr);//计算特征值，这是一组特征值
+	//cout << vfh_ptr->size() << endl;
+	single_feature.resize(308);
+	for (int i = 0; i < 308; ++i)
+	{
+		single_feature[i] = vfh_ptr->points[0].histogram[i];
+
+	}
+	//std::cout << "calculated" << std::endl;
+}
+
+//从整体点云中按照索引提取邻域内的小点云
+bool extractSubCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius_in, int i,
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out)
+{
+	int index = i;  // 要提取邻域的点的索引
+
+	// 创建一个KD树对象
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr kdtree(new pcl::search::KdTree<pcl::PointXYZ>);
+	kdtree->setInputCloud(cloud);
+	// 定义一个半径阈值，表示邻域搜索的半径范围
+	float radius = radius_in;
+
+	// 定义一个容器来存储搜索到的邻域点
+	std::vector<int> pointIndices;
+	std::vector<float> pointDistances;
+
+	// 进行半径内的最近邻搜索
+	if (kdtree->radiusSearch((*cloud)[index], radius, pointIndices, pointDistances) > 10) {
+		// 创建一个新的点云对象来存储邻域点云
+		pcl::PointCloud<pcl::PointXYZ>::Ptr neighborhoodCloud(new pcl::PointCloud<pcl::PointXYZ>);
+
+		// 从原始点云中提取邻域点云
+		pcl::copyPointCloud(*cloud, pointIndices, *neighborhoodCloud);
+		// 输出邻域点云的大小
+		//std::cout << "Size of neighborhood cloud: " << neighborhoodCloud->size() << std::endl;
+		*cloud_out = *neighborhoodCloud;
+		cloud_out->width = neighborhoodCloud->points.size();
+		cloud_out->height = 1;
+		cloud_out->is_dense = true;
+		return true;
+	}
+	else {
+		std::cout << "No points found in the neighborhood." << std::endl;
+		return false;
+	}
+}
+//计算整体点云中每个点的邻域相对于点云质心的VFHS特征
+//参数resolution表示输入点云的分辨率
+void VFHS_descriptor_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resolution, std::vector<std::vector<float>>& features)
+{
+	// 计算质心
+	Eigen::Vector4f centroid;
+	pcl::compute3DCentroid(*cloud, centroid);
+	// 将质心存储在Eigen::Vector3f中
+	Eigen::Vector3f centroid3D = centroid.head<3>();
+	std::vector<float> single_feature;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+	for (int index = 0; index < cloud->points.size(); ++index)
+	{
+		//注意此处的分辨率是用来提取领域内的点云团的，所以大点好，能包含更多信息。
+		if (extractSubCloud(cloud, resolution *15, index, cluster_cloud))
+		{
+			//此处传入的分辨率是计算法向量，进而计算VFH的，所以越小越精确
+			calculateVFH_yin(cluster_cloud, resolution *3, centroid3D, single_feature);
+			features.push_back(single_feature);
+			single_feature.clear();
+		}
+		else
+		{
+			features.push_back(single_feature);
+			single_feature.clear();
+		}
+
+	}
+	std::cout << "the entire cloud has " << features.size()<< "VFH_features." << std::endl;
+}
+void VFHS_descriptor_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resolution, std::vector<std::vector<float>>& features)
+{
+	// 计算质心
+	Eigen::Vector4f centroid;
+	pcl::compute3DCentroid(*cloud, centroid);
+	// 将质心存储在Eigen::Vector3f中
+	Eigen::Vector3f centroid3D = centroid.head<3>();
+	std::vector<float> single_feature;
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZ>);
+	for (int index = 0; index < cloud->points.size(); ++index)
+	{
+		//注意此处的分辨率是用来提取领域内的点云团的，所以大点好，能包含更多信息。
+		if (extractSubCloud(cloud, resolution * 15, index, cluster_cloud))
+		{
+			//此处传入的分辨率是计算法向量，进而计算VFH的，所以越小越精确
+			calculateVFH_yang(cluster_cloud, resolution * 3, centroid3D, single_feature);
+			features.push_back(single_feature);
+			single_feature.clear();
+		}
+		else
+		{
+			features.push_back(single_feature);
+			single_feature.clear();
+		}
+
+	}
+	std::cout << "the entire cloud has " << features.size() << "VFH_features." << std::endl;
+}
+
+
 void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, std::vector<int>& indices,
                      float sup_radius, std::vector<std::vector<float>>& features){
     int i, j;
@@ -744,6 +934,7 @@ void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, std::vector<int
         }
     }
 }
+//demo中用到的FPFH计算函数
 void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radius, std::vector<std::vector<float>>& features){
     int i, j;
     pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> n;
@@ -754,6 +945,20 @@ void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radiu
     n.setSearchMethod(tree);
     n.setRadiusSearch(sup_radius / 4);
     n.compute(*normals);
+
+	//// ---------------------------朝向任意方向-------------------------
+	//Eigen::Vector3f orientation_reference(0, 0, 1); // 任意方向
+
+	//for (int i = 0; i < normals->points.size(); ++i) {
+	//	auto normal = normals->points[i].getNormalVector3fMap();
+	//	if (normal.norm() == 0.0) {
+	//		normal = orientation_reference;
+	//	}
+	//	else if (normal.dot(orientation_reference) < 0.0) {
+	//		normal *= -1.0;
+	//	}
+	//}
+
     // Create the FPFH estimation class, and pass the input dataset+normals to it
     pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh;
     fpfh.setInputCloud (cloud);
@@ -780,6 +985,78 @@ void FPFH_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radiu
         }
     }
 }
+//新增函数，此函数除了计算FPFH外，还在此基础上增加了法向量信息，并适度放大
+void FPFH_Normal_descriptor(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float sup_radius, std::vector<std::vector<float>>& features) {
+	int i, j;
+	pcl::NormalEstimationOMP<pcl::PointXYZ, pcl::Normal> n;
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree(new pcl::search::KdTree<pcl::PointXYZ>);
+	tree->setInputCloud(cloud);
+	n.setInputCloud(cloud);
+	n.setSearchMethod(tree);
+	n.setRadiusSearch(sup_radius / 4);
+	n.compute(*normals);
+
+	//// ---------------------------朝向任意方向-------------------------
+	//Eigen::Vector3f orientation_reference(0, 0, 1); // 任意方向
+
+	//for (int i = 0; i < normals->points.size(); ++i) {
+	//	auto normal = normals->points[i].getNormalVector3fMap();
+	//	if (normal.norm() == 0.0) {
+	//		normal = orientation_reference;
+	//	}
+	//	else if (normal.dot(orientation_reference) < 0.0) {
+	//		normal *= -1.0;
+	//	}
+	//}
+
+	// Create the FPFH estimation class, and pass the input dataset+normals to it
+	pcl::FPFHEstimationOMP<pcl::PointXYZ, pcl::Normal, pcl::FPFHSignature33> fpfh;
+	fpfh.setInputCloud(cloud);
+	fpfh.setInputNormals(normals);
+	// alternatively, if cloud is of tpe PointNormal, do fpfh.setInputNormals (cloud);
+
+	// Create an empty kdtree representation, and pass it to the FPFH estimation object.
+	// Its content will be filled inside the object, based on the given input dataset (as no other search surface is given).
+	fpfh.setSearchMethod(tree);
+	// Output datasets
+	pcl::PointCloud<pcl::FPFHSignature33>::Ptr fpfhs(new pcl::PointCloud<pcl::FPFHSignature33>());
+
+	// Use all neighbors in a sphere of radius 5cm
+	// IMPORTANT: the radius used here has to be larger than the radius used to estimate the surface normals!!!
+	fpfh.setRadiusSearch(sup_radius);
+
+	//-----------------------------------计算每个点到质心的方向向量----------------------------
+	// 计算质心
+	Eigen::Vector4f centroid;
+	pcl::compute3DCentroid(*cloud, centroid);
+	pcl::PointCloud<pcl::Normal>::Ptr vectors(new pcl::PointCloud<pcl::Normal>);
+	// 计算每个点到质心的向量并保存
+	vectors->clear();
+	vectors->resize(cloud->size());
+	for (size_t i = 0; i < cloud->size(); ++i)
+	{
+		Eigen::Vector3f vector((*cloud)[i].x - centroid[0], (*cloud)[i].y - centroid[1], (*cloud)[i].z - centroid[2]);
+		(*vectors)[i].normal_x = vector[0];
+		(*vectors)[i].normal_y = vector[1];
+		(*vectors)[i].normal_z = vector[2];
+	}
+
+	// Compute the features
+	fpfh.compute(*fpfhs);
+	features.resize(fpfhs->points.size());
+	for (i = 0; i < features.size(); i++) {
+		features[i].resize(33);
+		for (j = 0; j < 33; j++) {
+			features[i][j] = fpfhs->points[i].histogram[j];
+		}
+		//需要放大指向质心的向量，这样才能在fpfh分量中占据一席之地
+		features[i].push_back((vectors->points[i].normal_x)*1000);
+		features[i].push_back((vectors->points[i].normal_y)*1000);
+		features[i].push_back((vectors->points[i].normal_z)*1000);
+	}
+}
+
 vector<int> removeInvalidPoint(PointCloudPtr cloud_in, vector<int> &keyPointIdx, float resolution)
 {
 	pcl::KdTreeFLANN<pcl::PointXYZ> kdtree;

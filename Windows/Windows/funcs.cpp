@@ -259,6 +259,8 @@ void feature_matching(PointCloudPtr& cloud_source, PointCloudPtr& cloud_target,
     {
         for (j = 0; j < 352; j++)
         {
+			//将点云的特征描述符写入到Feature_source中，后面没用到的项置空
+			//因此此函数也可复用
             if (j < feature_source[i].size()) Feature_source->points[i].descriptor[j] = feature_source[i][j];
             else Feature_source->points[i].descriptor[j] = 0;
         }

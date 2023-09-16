@@ -136,8 +136,8 @@ void demo(){
     PointCloudPtr new_src_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     PointCloudPtr new_des_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    string src_path = "Octree_sampled_changeScale/cam02_sampled_oc7_changeScale.pcd";
-    string des_path = "Octree_sampled_changeScale/cam03_sampled_oc7_changeScale.pcd";
+    string src_path = "Octree_sampled_Ominiverse/cam03_sampled_oc7_bottom.pcd";
+    string des_path = "Octree_sampled_Ominiverse/cam04_sampled_oc7_bottom.pcd";
     pcl::io::loadPCDFile(src_path, *src_cloud);
     pcl::io::loadPCDFile(des_path, *des_cloud);
 	cout << "Finish load PCDFile." << endl;
@@ -154,6 +154,12 @@ void demo(){
     FPFH_descriptor(new_src_cloud, downsample*5, src_feature);
     FPFH_descriptor(new_des_cloud, downsample*5, des_feature);
 
+	//FPFH_Normal_descriptor(new_src_cloud, downsample*5, src_feature);
+	//FPFH_Normal_descriptor(new_des_cloud, downsample*5, des_feature);
+
+	//VFHS_descriptor_yin(new_src_cloud, downsample, src_feature);
+	//VFHS_descriptor_yin(new_des_cloud, downsample, des_feature);
+
 	cout << "Start feature_matching." << endl;
     vector<Corre_3DMatch>correspondence;
     feature_matching(new_src_cloud, new_des_cloud, src_feature, des_feature, correspondence);
@@ -163,7 +169,7 @@ void demo(){
     
     folderPath = "demo/result";
     cout << "Start registration." << endl;
-    registration(src_cloud, des_cloud, correspondence, ov_lable, folderPath, resolution,0.99);
+    registration(src_cloud, des_cloud, correspondence, ov_lable, folderPath, resolution,0.8);
     //clear data
     src_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
     des_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
