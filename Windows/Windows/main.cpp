@@ -136,8 +136,14 @@ void demo(){
     PointCloudPtr new_src_cloud(new pcl::PointCloud<pcl::PointXYZ>);
     PointCloudPtr new_des_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
-    string src_path = "Octree_sampled_Ominiverse/cam03_sampled_oc7_bottom.pcd";
-    string des_path = "Octree_sampled_Ominiverse/cam04_sampled_oc7_bottom.pcd";
+	//---------------------------基线版本--无论如何都能对齐------------------------
+	//string src_path = "Octree_sampled_Ominiverse/cam03_sampled_oc7_bottom.pcd";
+	//string des_path = "Octree_sampled_Ominiverse/cam04_sampled_oc7_bottom.pcd";
+
+	//---------------------------测试版本------------------------
+    string src_path = "Octree_sampled_Ominiverse/cam0203_020_oc7_planeSegment.pcd";
+    string des_path = "Octree_sampled_Ominiverse/cam0104_020_oc7_planeSegment.pcd";
+
     pcl::io::loadPCDFile(src_path, *src_cloud);
     pcl::io::loadPCDFile(des_path, *des_cloud);
 	cout << "Finish load PCDFile." << endl;
@@ -151,14 +157,21 @@ void demo(){
     Voxel_grid_downsample(des_cloud, new_des_cloud, downsample);
 	cout << "Start calculate FPFH_deacriptor." << endl;
     vector<vector<float>> src_feature, des_feature;
-    FPFH_descriptor(new_src_cloud, downsample*5, src_feature);
-    FPFH_descriptor(new_des_cloud, downsample*5, des_feature);
-
+	//------------------------FPFH描述子--------------------------------
+	FPFH_descriptor(new_src_cloud, downsample*5, src_feature);
+	FPFH_descriptor(new_des_cloud, downsample*5, des_feature);
+	
+	//------------------------FPFH_Normal描述子--------------------------------
 	//FPFH_Normal_descriptor(new_src_cloud, downsample*5, src_feature);
 	//FPFH_Normal_descriptor(new_des_cloud, downsample*5, des_feature);
 
+	//------------------------同性VFH描述子--------------------------------
 	//VFHS_descriptor_yin(new_src_cloud, downsample, src_feature);
 	//VFHS_descriptor_yin(new_des_cloud, downsample, des_feature);
+
+	//------------------------VFHS_yinyang描述子--------------------------------
+	//VFHS_descriptor_yin(new_src_cloud, downsample, src_feature);
+	//VFHS_descriptor_yang(new_des_cloud, downsample, des_feature);
 
 	cout << "Start feature_matching." << endl;
     vector<Corre_3DMatch>correspondence;
@@ -169,7 +182,8 @@ void demo(){
     
     folderPath = "demo/result";
     cout << "Start registration." << endl;
-    registration(src_cloud, des_cloud, correspondence, ov_lable, folderPath, resolution,0.8);
+	//如果改此处的分辨率不产生影响，说明是前面的描述子选择不对
+    registration(src_cloud, des_cloud, correspondence, ov_lable, folderPath, resolution*1,0.98);
     //clear data
     src_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);
     des_cloud.reset(new pcl::PointCloud<pcl::PointXYZ>);

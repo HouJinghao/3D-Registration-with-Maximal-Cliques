@@ -149,9 +149,11 @@ void RCS_compute(pcl::PointCloud<pcl::PointXYZ>::Ptr  cloud, vector<int> indices
 void ISS_detector(PointCloudPtr cloud, float mr, float support_radius, vector<int>& key_indices);
 void Harris3D_detector(PointCloudPtr cloud, float NMS_radius, vector<int>& key_indices);
 //自己实现的函数
+//计算点云的型心
+vector<Eigen::Vector3f>  calcuCentroid(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud);
 //计算单个点云团相对于整体点云质心的VFH特征
-void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature);
-void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature);
+void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, vector<Eigen::Vector3f> viewpoints, std::vector<float>& single_feature);
+void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, vector<Eigen::Vector3f> viewpoints, std::vector<float>& single_feature);
 //从整体点云中按照索引提取邻域内的小点云
 bool extractSubCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius_in, int i,
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cloud_out);

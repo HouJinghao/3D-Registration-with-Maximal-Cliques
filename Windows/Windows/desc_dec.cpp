@@ -709,10 +709,93 @@ void Harris3D_detector(PointCloudPtr cloud, float NMS_radius, vector<int>&key_in
 }
 
 //自己实现的函数
+//计算点云的型心
+vector<Eigen::Vector3f>  calcuCentroid(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud)
+{
+	// 计算点云质心和协方差矩阵
+	Eigen::Vector4f pcaCentroid;
+	pcl::compute3DCentroid(*cloud, pcaCentroid);
+	Eigen::Matrix3f covariance;
+	pcl::computeCovarianceMatrixNormalized(*cloud, pcaCentroid, covariance);
+	// 协方差矩阵分解求特征值特征向量
+	Eigen::SelfAdjointEigenSolver<Eigen::Matrix3f> eigen_solver(covariance, Eigen::ComputeEigenvectors);
+	Eigen::Matrix3f eigenVectorsPCA = eigen_solver.eigenvectors();
+	Eigen::Vector3f eigenValuesPCA = eigen_solver.eigenvalues();
+	// 校正主方向间垂直
+	eigenVectorsPCA.col(2) = eigenVectorsPCA.col(0).cross(eigenVectorsPCA.col(1));
+	eigenVectorsPCA.col(0) = eigenVectorsPCA.col(1).cross(eigenVectorsPCA.col(2));
+	eigenVectorsPCA.col(1) = eigenVectorsPCA.col(2).cross(eigenVectorsPCA.col(0));
+
+	//cout << "特征值va(3x1):\n" << eigenValuesPCA << endl; // Eigen计算出来的特征值默认是从小到大排列
+	//cout << "特征向量ve(3x3):\n" << eigenVectorsPCA << endl;
+	cout << "质心点(4x1):\n" << pcaCentroid << endl;
+	/*
+	// 另一种计算点云协方差矩阵特征值和特征向量的方式:通过pcl中的pca接口，如下，这种情况得到的特征向量相似特征向量
+	pcl::PointCloud<pcl::PointXYZ>::Ptr cloudPCAprojection (new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::PCA<pcl::PointXYZ> pca;
+	pca.setInputCloud(cloudSegmented);
+	pca.project(*cloudSegmented, *cloudPCAprojection);
+	std::cerr << std::endl << "EigenVectors: " << pca.getEigenVectors() << std::endl;//计算特征向量
+	std::cerr << std::endl << "EigenValues: " << pca.getEigenValues() << std::endl;//计算特征值
+	*/
+	// 将输入点云转换至原点
+	Eigen::Matrix4f tm = Eigen::Matrix4f::Identity();     // 定义变换矩阵 
+	Eigen::Matrix4f tm_inv = Eigen::Matrix4f::Identity(); // 定义变换矩阵的逆
+	tm.block<3, 3>(0, 0) = eigenVectorsPCA.transpose();   // 旋转矩阵R.
+	tm.block<3, 1>(0, 3) = -1.0f * (eigenVectorsPCA.transpose()) * (pcaCentroid.head<3>());// 平移向量 -R*t
+	tm_inv = tm.inverse();
+
+	//std::cout << "变换矩阵tm(4x4):\n" << tm << std::endl;
+	//std::cout << "逆变矩阵tm'(4x4):\n" << tm_inv << std::endl;
+
+	pcl::PointCloud<pcl::PointXYZ>::Ptr transformedCloud(new pcl::PointCloud<pcl::PointXYZ>);
+	pcl::transformPointCloud(*cloud, *transformedCloud, tm);
+
+	pcl::PointXYZ min_p1, max_p1;
+	Eigen::Vector3f min_point, max_point;
+	Eigen::Vector3f c1, c;
+	Eigen::Vector3f A1, A;
+	Eigen::Vector3f B1, B;
+	pcl::getMinMax3D(*transformedCloud, min_p1, max_p1);
+	//取最大包围盒的中间点,即形心点
+	c1 = 0.5f * (min_p1.getVector3fMap() + max_p1.getVector3fMap());
+	//取包围盒的最小点和最大点
+	min_point = min_p1.getVector3fMap();
+	max_point = max_p1.getVector3fMap();
+	//给A1和B1赋值
+	A1.x() = (min_point.y() + max_point.x())*0.5;
+	A1.y() = (min_point.y() +  max_point.y())*0.5;
+	A1.z() =  min_point.z();
+	//给A1和B1赋值
+	B1.x() = (min_point.y() + max_point.x()) * 0.5;
+	B1.y() = (min_point.y() + max_point.y()) * 0.5;
+	B1.z() =  max_point.z();
+	//cout << "型心c1(3x1):\n" << c1 << endl;
+	//c1是变换后的矩阵盒子的形心
+	//c是变换前的矩阵盒子的形心
+	Eigen::Affine3f tm_inv_aff(tm_inv);
+	pcl::transformPoint(c1, c, tm_inv_aff);
+	pcl::transformPoint(A1, A, tm_inv_aff);
+	pcl::transformPoint(B1, B, tm_inv_aff);
+	cout << "型心c(3x1):\n" << c << endl;
+
+	vector<Eigen::Vector3f> viewpoints;
+	viewpoints.push_back(c);
+	viewpoints.push_back(c);
+	viewpoints.push_back(c);
+
+
+	return viewpoints;
+}
+// 
 //计算单个点云团相对于整体点云质心的VFH特征
 //此处的法向量指向内部
-void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature) {
+void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, vector<Eigen::Vector3f> viewpoints, std::vector<float>& single_feature) {
 	//计算点云的VFH
+	Eigen::Vector3f centroid3D = viewpoints[0];
+	Eigen::Vector3f A = viewpoints[1];
+	Eigen::Vector3f B = viewpoints[2];
+
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree1(new pcl::search::KdTree<pcl::PointXYZ>());
 	ne.setInputCloud(cloud);
@@ -725,7 +808,9 @@ void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, E
 	vfh.setInputCloud(cloud);
 	vfh.setInputNormals(normals);
 	//设置视点
-	vfh.setViewPoint(viewpoint[0], viewpoint[1], viewpoint[2]);
+	vfh.setViewPoint(centroid3D[0], centroid3D[1], centroid3D[2]);
+	vfh.setViewPoint(A[0], A[1], A[2]);
+	vfh.setViewPoint(B[0], B[1], B[2]);
 
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree2(new pcl::search::KdTree<pcl::PointXYZ>());
 	vfh.setSearchMethod(tree2);
@@ -741,8 +826,12 @@ void calculateVFH_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, E
 	//std::cout << "calculated" << std::endl;
 }
 //此处的法向量指向内部
-void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, Eigen::Vector3f viewpoint, std::vector<float>& single_feature) {
+void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, vector<Eigen::Vector3f> viewpoints, std::vector<float>& single_feature) {
 	//计算点云的VFH
+	Eigen::Vector3f centroid3D = viewpoints[0];
+	Eigen::Vector3f A = viewpoints[1];
+	Eigen::Vector3f B = viewpoints[2];
+
 	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree1(new pcl::search::KdTree<pcl::PointXYZ>());
 	ne.setInputCloud(cloud);
@@ -778,7 +867,9 @@ void calculateVFH_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius, 
 	vfh.setInputCloud(cloud);
 	vfh.setInputNormals(normals);
 	//设置视点
-	vfh.setViewPoint(viewpoint[0], viewpoint[1], viewpoint[2]);
+	vfh.setViewPoint(centroid3D[0], centroid3D[1], centroid3D[2]);
+	vfh.setViewPoint(A[0], A[1], A[2]);
+	vfh.setViewPoint(B[0], B[1], B[2]);
 
 	pcl::search::KdTree<pcl::PointXYZ>::Ptr tree2(new pcl::search::KdTree<pcl::PointXYZ>());
 	vfh.setSearchMethod(tree2);
@@ -834,20 +925,29 @@ bool extractSubCloud(pcl::PointCloud<pcl::PointXYZ>::Ptr cloud, float radius_in,
 //参数resolution表示输入点云的分辨率
 void VFHS_descriptor_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resolution, std::vector<std::vector<float>>& features)
 {
-	// 计算质心
-	Eigen::Vector4f centroid;
-	pcl::compute3DCentroid(*cloud, centroid);
+	// 计算形心而非质心
+	//Eigen::Vector4f centroid;
+	//pcl::compute3DCentroid(*cloud, centroid);
 	// 将质心存储在Eigen::Vector3f中
-	Eigen::Vector3f centroid3D = centroid.head<3>();
+	//Eigen::Vector3f centroid3D = centroid.head<3>();
+	vector<Eigen::Vector3f> viewpoints;
+	viewpoints = calcuCentroid(cloud);
+	//Eigen::Vector3f vector1(-0.19*6, 0.16*6, 0.8*6);
+	//viewpoints.push_back(vector1);
+	//Eigen::Vector3f vector2(-0.2*6, 0.05*6, 0.85*6);
+	//viewpoints.push_back(vector2);
+	//Eigen::Vector3f vector3(0.09*6, 0.03*6, 0.84*6);
+	//viewpoints.push_back(vector3);
+
 	std::vector<float> single_feature;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 	for (int index = 0; index < cloud->points.size(); ++index)
 	{
 		//注意此处的分辨率是用来提取领域内的点云团的，所以大点好，能包含更多信息。
-		if (extractSubCloud(cloud, resolution *15, index, cluster_cloud))
+		if (extractSubCloud(cloud, resolution *22, index, cluster_cloud))
 		{
 			//此处传入的分辨率是计算法向量，进而计算VFH的，所以越小越精确
-			calculateVFH_yin(cluster_cloud, resolution *3, centroid3D, single_feature);
+			calculateVFH_yin(cluster_cloud, resolution *3, viewpoints, single_feature);
 			features.push_back(single_feature);
 			single_feature.clear();
 		}
@@ -862,20 +962,29 @@ void VFHS_descriptor_yin(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resol
 }
 void VFHS_descriptor_yang(pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float resolution, std::vector<std::vector<float>>& features)
 {
-	// 计算质心
-	Eigen::Vector4f centroid;
-	pcl::compute3DCentroid(*cloud, centroid);
+	// 计算形心而非质心
+	//Eigen::Vector4f centroid;
+	//pcl::compute3DCentroid(*cloud, centroid);
 	// 将质心存储在Eigen::Vector3f中
-	Eigen::Vector3f centroid3D = centroid.head<3>();
+	//Eigen::Vector3f centroid3D = centroid.head<3>();
+	vector<Eigen::Vector3f> viewpoints;
+	//viewpoints = calcuCentroid(cloud);
+	Eigen::Vector3f vector1(-0, 1, 2);
+	viewpoints.push_back(vector1);
+	Eigen::Vector3f vector2(-0.3, 0.5, 4.2);
+	viewpoints.push_back(vector2);
+	Eigen::Vector3f vector3(0.3, 0.5, 4.2);
+	viewpoints.push_back(vector3);
+
 	std::vector<float> single_feature;
 	pcl::PointCloud<pcl::PointXYZ>::Ptr cluster_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 	for (int index = 0; index < cloud->points.size(); ++index)
 	{
 		//注意此处的分辨率是用来提取领域内的点云团的，所以大点好，能包含更多信息。
-		if (extractSubCloud(cloud, resolution * 15, index, cluster_cloud))
+		if (extractSubCloud(cloud, resolution * 20, index, cluster_cloud))
 		{
 			//此处传入的分辨率是计算法向量，进而计算VFH的，所以越小越精确
-			calculateVFH_yang(cluster_cloud, resolution * 3, centroid3D, single_feature);
+			calculateVFH_yang(cluster_cloud, resolution * 3, viewpoints, single_feature);
 			features.push_back(single_feature);
 			single_feature.clear();
 		}
