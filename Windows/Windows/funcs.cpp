@@ -569,7 +569,8 @@ double OTSU_thresh(/*vector<Vote> Vote_score*/Eigen::VectorXd values)
 	return thresh;
 }
 
-//
+//在这里参考此函数增加类似函数
+//实现计算带法线的距离
 double Distance(pcl::PointXYZ& A, pcl::PointXYZ& B) {
 	double distance = 0;
 	double d_x = (double)A.x - (double)B.x;
