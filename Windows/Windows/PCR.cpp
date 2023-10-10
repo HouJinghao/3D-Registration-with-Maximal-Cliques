@@ -193,7 +193,7 @@ Eigen::MatrixXf Graph_construction(vector<Corre_3DMatch>& correspondence, float 
     cmp_score.setZero();
     Corre_3DMatch c1, c2;
     float score, src_dis, des_dis, dis, alpha_dis;
-
+	//计算一阶图FOG节点权重Scmp的地方
     for (int i = 0; i < size; i++)
     {
         c1 = correspondence[i];
@@ -390,6 +390,7 @@ void post_refinement(vector<Corre_3DMatch>&correspondence, PointCloudPtr& src_co
 	best_score = pre_score;
 }
 
+//使用SVD计算并评估变换矩阵
 double evaluation_trans(vector<Corre_3DMatch>& Match, vector<Corre_3DMatch>& correspondnece, PointCloudPtr& src_corr_pts, PointCloudPtr& des_corr_pts, double weight_thresh, Eigen::Matrix4d& trans, double metric_thresh, const string &metric, float resolution, bool instance_equal) {
 
 	PointCloudPtr src_pts(new pcl::PointCloud<pcl::PointXYZ>);

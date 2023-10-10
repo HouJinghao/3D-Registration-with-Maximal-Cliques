@@ -1037,7 +1037,10 @@ bool registration(PointCloudPtr& src, PointCloudPtr& des, vector<Corre_3DMatch>&
     bool sc2 = true;
     bool GT_cmp_mode = false;
     int max_est_num = INT_MAX;
-    string metric = "MAE";
+    //系统初始值
+	string metric = "MAE";
+	//我的更改
+    //string metric = "MSE";
     string descriptor = "NULL";
     string name = "test";
     int total_num = correspondence.size();
@@ -1053,6 +1056,7 @@ bool registration(PointCloudPtr& src, PointCloudPtr& des, vector<Corre_3DMatch>&
     std::chrono::duration<double> elapsed_time, total_time;
 
     start = std::chrono::system_clock::now();
+	//图构建的地方，sc2表示使用SOG方式计算边的权重
     Eigen::MatrixXf Graph = Graph_construction(correspondence, resolution, sc2, cmp_thresh);
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
@@ -1261,6 +1265,7 @@ bool registration(PointCloudPtr& src, PointCloudPtr& des, vector<Corre_3DMatch>&
         remain.push_back(i);
     }
     node_cliques* N_C = new node_cliques[(int)total_num];
+	//猜测这里可能是Node-guided Clique Selection，只保留了具有最多节点数的那个极大团
     find_largest_clique_of_node(Graph, &cliques, correspondence, N_C, remain, total_num, max_est_num, descriptor);
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
@@ -1318,6 +1323,8 @@ bool registration(PointCloudPtr& src, PointCloudPtr& des, vector<Corre_3DMatch>&
             }
         }
     }
+
+
     end = std::chrono::system_clock::now();
     elapsed_time = end - start;
     total_time += elapsed_time;

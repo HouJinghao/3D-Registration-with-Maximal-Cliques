@@ -115,7 +115,10 @@ void cloud_viewer(PointCloudPtr cloud, const char* name)
 	pcl::visualization::PointCloudColorHandlerCustom< pcl::PointXYZ> cloud_color_handler_tar(cloud, 30, 144, 255);
 	if (name == "src")viewer.addPointCloud(cloud, cloud_color_handler_src, name);
 	if (name == "tar")viewer.addPointCloud(cloud, cloud_color_handler_tar, name);
+	//程序初始设置
 	viewer.setBackgroundColor(255, 255, 255);
+	//我的更改
+	//viewer.setBackgroundColor(0, 0, 0);
 	while (!viewer.wasStopped())
 	{
 		viewer.spinOnce();
@@ -150,6 +153,7 @@ void cloud_viewer_src_des(PointCloudPtr cloud_src, PointCloudPtr cloud_des) {
 }
 
 //registration result
+//显示配准结果的窗口
 void visualization(PointCloudPtr cloud_src, PointCloudPtr cloud_tar, /*PointCloudPtr keyPoint_src, PointCloudPtr keyPoint_tar,*/ Eigen::Matrix4d Mat, float resolution)
 {
 	//cout << "visu resolution=" << resolution << endl;
@@ -176,9 +180,12 @@ void visualization(PointCloudPtr cloud_src, PointCloudPtr cloud_tar, /*PointClou
 	//	viewer.addLine< pcl::PointXYZ, pcl::PointXYZ>(cloud_src->points[idx1], cloud_tar->points[idx2], 0, 255, 0, SS_line_b.str());
 	//}
 	//viewer.addSphere<pcl::PointXYZ>(cloud_src->points[500], 5 * resolution, "sphere", 0);
-	viewer.setBackgroundColor(0, 0, 0);
+	//程序默认初始设置
+	//viewer.setBackgroundColor(0, 0, 0);
+	//我的设置
+	viewer.setBackgroundColor(255,255,255);
     viewer.addText("Before registration\n", 10, 15, 20, 255, 255, 255, "info_1");
-	viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 1, "cloud_src");
+	viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, 2, "cloud_src");
 
 	// Set camera position and orientation
 	//viewer.setCameraPosition(-3.68332, 2.94092, 5.71266, 0.289847, 0.921947, -0.256907, 0);
@@ -333,10 +340,14 @@ void Corres_Viewer_Score(PointCloudPtr cloud_s, PointCloudPtr cloud_t, vector<Co
 		cloud_add->points[i].x -= center_x; cloud_add->points[i].y -= center_y; cloud_add->points[i].z -= center_z;
 	}
 	//boost::shared_ptr<pcl::visualization::PCLVisualizer> viewer_rgb;
+	//显示初始配准的地方
 	pcl::visualization::PCLVisualizer viewer("Selected matches");
 	viewer.addPointCloud(cloud_add, "cloud_view");
-	viewer.setBackgroundColor(0, 0, 0);
-	float pointsize = 1;
+	//程序默认初始设置
+	//viewer.setBackgroundColor(0, 0, 0);
+	//我的更改
+	viewer.setBackgroundColor(255, 255, 255);
+	float pointsize = 2;
 	viewer.setPointCloudRenderingProperties(pcl::visualization::PCL_VISUALIZER_POINT_SIZE, pointsize, "cloud_view");
 	//
 	vector<Vertex> RGB;

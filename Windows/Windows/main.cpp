@@ -137,12 +137,12 @@ void demo(){
     PointCloudPtr new_des_cloud(new pcl::PointCloud<pcl::PointXYZ>);
 
 	//---------------------------基线版本--无论如何都能对齐------------------------
-	//string src_path = "Octree_sampled_Ominiverse/cam03_sampled_oc7_bottom.pcd";
-	//string des_path = "Octree_sampled_Ominiverse/cam04_sampled_oc7_bottom.pcd";
+	//string src_path = "data_octree_sampled/cam03_sampled_oc7_bottom.pcd";
+	//string des_path = "data_octree_sampled/cam04_sampled_oc7_bottom.pcd";
 
 	//---------------------------测试版本------------------------
-    string src_path = "Octree_sampled_Ominiverse/cam0203_020_oc7_planeSegment.pcd";
-    string des_path = "Octree_sampled_Ominiverse/cam0104_020_oc7_planeSegment.pcd";
+    string src_path = "data_octree_sampled/cam01_sampled_oc7_bottom.pcd";
+    string des_path = "data_octree_sampled/cam04_sampled_oc7_bottom.pcd";
 
     pcl::io::loadPCDFile(src_path, *src_cloud);
     pcl::io::loadPCDFile(des_path, *des_cloud);

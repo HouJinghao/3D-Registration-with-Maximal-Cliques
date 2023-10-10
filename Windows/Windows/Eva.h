@@ -7,9 +7,17 @@
 #define Random(x) (rand()%x)
 #define Corres_view_gap -200
 #define Align_precision_threshold 0.1
-#define tR 116//30
-#define tG 205//144
-#define tB 211//255
+//程序设定的初始值
+//#define tR 116//30
+//#define tG 205//144
+//#define tB 211//255
+//#define sR 253//209//220
+//#define sG 224//26//20
+//#define sB 2//32//60
+//修改之后的值
+#define tR 30
+#define tG 45
+#define tB 255
 #define sR 253//209//220
 #define sG 224//26//20
 #define sB 2//32//60
