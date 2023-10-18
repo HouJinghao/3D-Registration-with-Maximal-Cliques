@@ -569,6 +569,29 @@ double OTSU_thresh(/*vector<Vote> Vote_score*/Eigen::VectorXd values)
 	return thresh;
 }
 
+//计算点云的法线并将法线信息储存到点云的pointXYZNormal点中
+pcl::PointCloud<pcl::PointNormal>::Ptr calculatePointsWithNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float radius)
+{
+	pcl::NormalEstimation<pcl::PointXYZ, pcl::Normal> ne;
+	pcl::PointCloud<pcl::Normal>::Ptr normals(new pcl::PointCloud<pcl::Normal>);
+
+	// 输入点云数据
+	ne.setInputCloud(cloud);
+
+	// 设定搜索半径，用于计算每个点的法向量
+	ne.setRadiusSearch(radius);  // 这里的半径需要根据你的点云数据进行调整
+
+	// 计算法向量
+	ne.compute(*normals);
+
+	// 创建带有法向量信息的点云
+	pcl::PointCloud<pcl::PointNormal>::Ptr pointsWithNormals(new pcl::PointCloud<pcl::PointNormal>);
+	pcl::concatenateFields(*cloud, *normals, *pointsWithNormals);
+
+	return pointsWithNormals;
+}
+
+
 //在这里参考此函数增加类似函数
 //实现计算带法线的距离
 double Distance(pcl::PointXYZ& A, pcl::PointXYZ& B) {
@@ -577,6 +600,21 @@ double Distance(pcl::PointXYZ& A, pcl::PointXYZ& B) {
 	double d_y = (double)A.y - (double)B.y;
 	double d_z = (double)A.z - (double)B.z;
 	distance = sqrt(d_x * d_x + d_y * d_y + d_z * d_z);
+	return distance;
+}
+//带法向量的距离计算
+double DistanceWithNormal(pcl::PointNormal& A, pcl::PointNormal& B)
+{
+	double distance = 0;
+	double d_x = A.x - B.x;
+	double d_y = A.y - B.y;
+	double d_z = A.z - B.z;
+	double d_nx = A.normal_x - B.normal_x;
+	double d_ny = A.normal_y - B.normal_y;
+	double d_nz = A.normal_z - B.normal_z;
+
+	// 考虑法向量信息的距离计算：点坐标差的模 + 法向量差的模
+	distance = sqrt(d_x * d_x + d_y * d_y + d_z * d_z + d_nx * d_nx + d_ny * d_ny + d_nz * d_nz);
 	return distance;
 }
 

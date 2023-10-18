@@ -8,6 +8,7 @@
 #define Corres_view_gap -200
 #define Align_precision_threshold 0.1
 //程序设定的初始值
+// 这里存的是目标点云和源点云的RGB值
 //#define tR 116//30
 //#define tG 205//144
 //#define tB 211//255
@@ -40,6 +41,8 @@ extern bool no_logs;
 #include <unordered_set>
 #include <Eigen/Eigen>
 #include <igraph.h>
+//计算法向量需要的头文件
+#include <pcl/features/normal_3d.h>
 //
 typedef pcl::PointCloud<pcl::PointXYZ>::Ptr PointCloudPtr;
 typedef pcl::PointXYZ PointInT;
@@ -143,6 +146,10 @@ int Correct_corre_compute(PointCloudPtr cloud_s, PointCloudPtr cloud_t, vector<C
 void Correct_corre_select(PointCloudPtr cloud_s, PointCloudPtr cloud_t, vector<Corre> Corres, float correct_thresh,
 	Eigen::Matrix4f& GT_mat, vector<Corre>& Corres_selected);
 double OTSU_thresh(/*vector<Vote> Vote_score*/Eigen::VectorXd values);
+//计算点云的法线并将法线信息储存到点云的pointXYZNormal点中
+pcl::PointCloud<pcl::PointNormal>::Ptr calculatePointsWithNormals(const pcl::PointCloud<pcl::PointXYZ>::Ptr& cloud, float radius = 0.05);
+//带法向量的距离计算
+double DistanceWithNormal(pcl::PointNormal& A, pcl::PointNormal& B);
 double Distance(pcl::PointXYZ& A, pcl::PointXYZ& B);
 double Distance_3DMatch(Vertex A, Vertex B);
 Eigen::MatrixXf Graph_construction(vector<Corre_3DMatch>& correspondence, float resolution, bool sc2, const string &name,const string &descriptor);

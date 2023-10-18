@@ -141,7 +141,7 @@ void demo(){
 	//string des_path = "data_octree_sampled/cam04_sampled_oc7_bottom.pcd";
 
 	//---------------------------≤‚ ‘∞Ê±æ------------------------
-    string src_path = "data_octree_sampled/cam01_sampled_oc7_bottom.pcd";
+    string src_path = "data_octree_sampled/cam03_sampled_oc7_bottom.pcd";
     string des_path = "data_octree_sampled/cam04_sampled_oc7_bottom.pcd";
 
     pcl::io::loadPCDFile(src_path, *src_cloud);

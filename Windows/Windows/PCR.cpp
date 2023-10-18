@@ -424,9 +424,19 @@ double evaluation_trans(vector<Corre_3DMatch>& Match, vector<Corre_3DMatch>& cor
 	double score = 0.0;
 	int inlier = 0;
 		int corr_num = src_corr_pts->points.size();
+	//在for循环之前计算src_trans点云和des_corr_pts的法向量信息
+	//直接调用funcs.cpp中定义好的函数
+	float res_normal = 5 * MeshResolution_mr_compute(src_trans);
+	pcl::PointCloud<pcl::PointNormal>::Ptr src_trans_normal = calculatePointsWithNormals(src_trans,res_normal);
+	pcl::PointCloud<pcl::PointNormal>::Ptr des_corr_normal = calculatePointsWithNormals(des_corr_pts,res_normal);
 	for (int i = 0; i < corr_num; i++)
 		{
+			//评估变换矩阵是否达标的距离distance
+			//原有代码注释掉
 			double dist = Distance(src_trans->points[i], des_corr_pts->points[i]);
+			//计算带法向量的距离
+			//double dist = DistanceWithNormal(src_trans_normal->points[i], des_corr_normal->points[i]);
+			
 		double w = 1;
 		if (add_overlap)
 		{
